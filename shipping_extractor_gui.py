@@ -1,8 +1,8 @@
 """
 Shipping Document Extractor - GUI
 ===================================
-사용법: python shipping_extractor_gui.py
-필요 라이브러리: pip install pdfplumber openpyxl
+Usage: python shipping_extractor_gui.py
+Requirements: pip install pdfplumber openpyxl
 """
 
 import tkinter as tk
@@ -13,7 +13,7 @@ import sys
 import glob
 from datetime import datetime
 
-# ── 파싱/Excel 로직 (extract_shipping_docs.py 와 동일) ──────────────────
+# ── Parsing / Excel logic ──────────────────
 
 import pdfplumber
 import openpyxl
@@ -102,12 +102,12 @@ def process_all(pdf_paths, log_fn=None):
         fname = os.path.basename(path)
         if log_fn: log_fn(f"[{i}/{total}] {fname}")
         invoice_data, detail_rows, err = process_pdf(path)
-        if err and log_fn: log_fn(f"  ⚠️  오류: {err}")
+        if err and log_fn: log_fn(f"  ⚠️  Error: {err}")
         seen_delivery = set()
         for row in detail_rows:
             delivery_no = row.get('Delivery_No', '')
             inv = invoice_data.get(delivery_no, {})
-            # 같은 Delivery No.의 첫 번째 행에만 U/P, Amt 표시
+            # Show U/P and Amt only on first row per Delivery No.
             is_first = delivery_no not in seen_delivery
             seen_delivery.add(delivery_no)
             row.update({
@@ -174,10 +174,10 @@ def write_excel(rows, out_path):
             for r in range(2, len(rows) + 2):
                 ws.cell(row=r, column=col_idx).number_format = num_cols[header]
     ws2 = wb.create_sheet('Summary')
-    ws2['A1'] = '추출 일시';  ws2['B1'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    ws2['A2'] = '총 행 수';   ws2['B2'] = len(rows)
-    ws2['A3'] = '총 수량 (EA)'; ws2['B3'] = sum(r.get('Qty_EA', 0) for r in rows if isinstance(r.get('Qty_EA'), (int, float)))
-    ws2['A4'] = '총 금액 (USD)'; ws2['B4'] = round(sum(r.get('Amt_USD', 0) for r in rows if isinstance(r.get('Amt_USD'), (int, float))), 2)
+    ws2['A1'] = 'Extracted At';  ws2['B1'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ws2['A2'] = 'Total Rows';   ws2['B2'] = len(rows)
+    ws2['A3'] = 'Total Qty (EA)'; ws2['B3'] = sum(r.get('Qty_EA', 0) for r in rows if isinstance(r.get('Qty_EA'), (int, float)))
+    ws2['A4'] = 'Total Amt (USD)'; ws2['B4'] = round(sum(r.get('Amt_USD', 0) for r in rows if isinstance(r.get('Amt_USD'), (int, float))), 2)
     ws2['B4'].number_format = '#,##0.00'
     wb.save(out_path)
 
@@ -206,36 +206,36 @@ class App(tk.Tk):
         ACCENT = '#1F3864'
         BTN_FG = 'white'
 
-        # 타이틀
+        # Title
         tk.Label(self, text='Shipping Document Extractor',
                  font=('Segoe UI', 14, 'bold'), bg=BG, fg=ACCENT).pack(pady=(PAD, 4))
         tk.Label(self, text='Commercial Invoice + Packing Detail PDF → Excel',
                  font=('Segoe UI', 9), bg=BG, fg='#666').pack(pady=(0, PAD))
 
-        # PDF 폴더 선택
-        frm1 = tk.LabelFrame(self, text=' 📁  PDF 폴더 ', font=('Segoe UI', 9, 'bold'),
+        # PDF Folder
+        frm1 = tk.LabelFrame(self, text=' 📁  PDF Folder ', font=('Segoe UI', 9, 'bold'),
                               bg=BG, fg=ACCENT, bd=1, relief='groove', padx=12, pady=10)
         frm1.pack(fill='x', padx=PAD, pady=(0, 10))
 
-        self.folder_var = tk.StringVar(value='폴더를 선택하세요')
+        self.folder_var = tk.StringVar(value='Select a folder')
         tk.Entry(frm1, textvariable=self.folder_var, font=('Segoe UI', 9),
                  state='readonly', width=44, bg='white').pack(side='left', padx=(0, 8))
-        tk.Button(frm1, text='찾아보기', font=('Segoe UI', 9), bg=ACCENT, fg=BTN_FG,
+        tk.Button(frm1, text='Browse', font=('Segoe UI', 9), bg=ACCENT, fg=BTN_FG,
                   relief='flat', padx=10, command=self._browse_folder).pack(side='left')
 
-        # 저장 위치
-        frm2 = tk.LabelFrame(self, text=' 💾  저장 위치 ', font=('Segoe UI', 9, 'bold'),
+        # Save location
+        frm2 = tk.LabelFrame(self, text=' 💾  Save Location ', font=('Segoe UI', 9, 'bold'),
                               bg=BG, fg=ACCENT, bd=1, relief='groove', padx=12, pady=10)
         frm2.pack(fill='x', padx=PAD, pady=(0, 10))
 
-        self.out_var = tk.StringVar(value='PDF 폴더와 같은 위치에 저장')
+        self.out_var = tk.StringVar(value='Same folder as PDF')
         tk.Entry(frm2, textvariable=self.out_var, font=('Segoe UI', 9),
                  state='readonly', width=44, bg='white').pack(side='left', padx=(0, 8))
-        tk.Button(frm2, text='변경', font=('Segoe UI', 9), bg='#555', fg=BTN_FG,
+        tk.Button(frm2, text='Change', font=('Segoe UI', 9), bg='#555', fg=BTN_FG,
                   relief='flat', padx=10, command=self._browse_out).pack(side='left')
 
-        # 로그
-        frm3 = tk.LabelFrame(self, text=' 📋  처리 로그 ', font=('Segoe UI', 9, 'bold'),
+        # Log
+        frm3 = tk.LabelFrame(self, text=' 📋  Log ', font=('Segoe UI', 9, 'bold'),
                               bg=BG, fg=ACCENT, bd=1, relief='groove', padx=8, pady=8)
         frm3.pack(fill='both', expand=True, padx=PAD, pady=(0, 10))
 
@@ -246,21 +246,21 @@ class App(tk.Tk):
         sb.pack(side='right', fill='y')
         self.log_text.pack(fill='both', expand=True)
 
-        # 실행 버튼
-        self.run_btn = tk.Button(self, text='▶  추출 시작', font=('Segoe UI', 11, 'bold'),
+        # Run button
+        self.run_btn = tk.Button(self, text='▶  Extract', font=('Segoe UI', 11, 'bold'),
                                  bg='#2E7D32', fg=BTN_FG, relief='flat', height=2,
                                  activebackground='#1B5E20', command=self._run)
         self.run_btn.pack(fill='x', padx=PAD, pady=(0, PAD))
 
-        self._out_dir = None  # 별도 지정 저장 경로
+        self._out_dir = None  # Custom save path
 
     def _browse_folder(self):
-        path = filedialog.askdirectory(title='PDF 파일이 있는 폴더 선택')
+        path = filedialog.askdirectory(title='Select PDF Folder')
         if path:
             self.folder_var.set(path)
 
     def _browse_out(self):
-        path = filedialog.askdirectory(title='Excel 저장 위치 선택')
+        path = filedialog.askdirectory(title='Select Save Location')
         if path:
             self._out_dir = path
             self.out_var.set(path)
@@ -274,28 +274,34 @@ class App(tk.Tk):
 
     def _run(self):
         folder = self.folder_var.get()
-        if not folder or folder == '폴더를 선택하세요':
-            messagebox.showwarning('폴더 미선택', 'PDF 폴더를 먼저 선택하세요.')
+        if not folder or folder == 'Select a folder':
+            messagebox.showwarning('No Folder', 'Please select a PDF folder first.')
             return
 
-        pdf_paths = sorted(glob.glob(os.path.join(folder, '*.pdf')) +
-                           glob.glob(os.path.join(folder, '*.PDF')))
+        seen = set()
+        pdf_paths = []
+        for p in glob.glob(os.path.join(folder, '*.pdf')) + glob.glob(os.path.join(folder, '*.PDF')):
+            key = os.path.normcase(os.path.abspath(p))
+            if key not in seen:
+                seen.add(key)
+                pdf_paths.append(p)
+        pdf_paths = sorted(pdf_paths)
         if not pdf_paths:
-            messagebox.showwarning('PDF 없음', f'선택한 폴더에 PDF 파일이 없습니다.\n{folder}')
+            messagebox.showwarning('No PDF', f'No PDF files found in:\n{folder}')
             return
 
-        self.run_btn.configure(state='disabled', text='처리 중...', bg='#888')
+        self.run_btn.configure(state='disabled', text='Processing...', bg='#888')
         self.log_text.configure(state='normal')
         self.log_text.delete('1.0', 'end')
         self.log_text.configure(state='disabled')
 
         def worker():
-            self._log(f'📄 PDF {len(pdf_paths)}개 처리 시작\n')
+            self._log(f'📄 Processing {len(pdf_paths)} PDF file(s)...\n')
             rows = process_all(pdf_paths, log_fn=self._log)
 
             if not rows:
-                self._log('\n⚠️  추출된 데이터가 없습니다.')
-                self.run_btn.configure(state='normal', text='▶  추출 시작', bg='#2E7D32')
+                self._log('\n⚠️  No data extracted. Please check the PDF structure.')
+                self.run_btn.configure(state='normal', text='▶  Extract', bg='#2E7D32')
                 return
 
             out_dir = self._out_dir if self._out_dir else folder
@@ -304,14 +310,14 @@ class App(tk.Tk):
 
             try:
                 write_excel(rows, out_path)
-                self._log(f'\n✅ 완료!  총 {len(rows)}행 추출')
+                self._log(f'\n✅ Done!  {len(rows)} rows extracted')
                 self._log(f'📂 {out_path}')
-                if messagebox.askyesno('완료', f'✅ 추출 완료!\n\n총 {len(rows)}행\n\nExcel 파일을 열까요?'):
+                if messagebox.askyesno('Done', f'✅ Extraction complete!\n\n{len(rows)} rows\n\nOpen Excel file?'):
                     os.startfile(out_path)
             except Exception as e:
-                self._log(f'\n❌ 저장 오류: {e}')
+                self._log(f'\n❌ Save error: {e}')
 
-            self.run_btn.configure(state='normal', text='▶  추출 시작', bg='#2E7D32')
+            self.run_btn.configure(state='normal', text='▶  Extract', bg='#2E7D32')
 
         threading.Thread(target=worker, daemon=True).start()
 
